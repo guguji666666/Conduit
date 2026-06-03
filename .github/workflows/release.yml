@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Test and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Android APKs
+        run: flutter build apk --release --split-per-abi
+
+      - name: Build release metadata
+        id: metadata
+        shell: bash
+        run: |
+          timestamp="$(date -u +'%Y.%m.%d-%H%M')"
+          short_sha="$(git rev-parse --short=7 HEAD)"
+          tag="v${timestamp}-${short_sha}"
+          {
+            echo "tag=${tag}"
+            echo "name=Release ${tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Show local release metadata
+        if: ${{ env.ACT }}
+        run: |
+          echo "Local act run; skipping GitHub tag and release creation."
+          echo "Tag would be: ${{ steps.metadata.outputs.tag }}"
+
+      - name: Create GitHub release
+        if: ${{ !env.ACT }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.metadata.outputs.tag }}
+          name: ${{ steps.metadata.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          files: build/app/outputs/flutter-apk/*-release.apk
+          generate_release_notes: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

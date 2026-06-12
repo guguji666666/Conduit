@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -20,15 +21,17 @@ import 'package:conduit/features/terminal/data/secure_host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/network_connectivity.dart';
+import 'package:conduit/features/terminal/domain/predictive_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/roaming_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_session.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
 import 'package:conduit/main.dart';
+import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -217,6 +220,142 @@ void main() {
 
       controller.dispose();
     });
+
+    test('keeps predictive overlays until confirmed output arrives', () async {
+      final session = _PredictiveTerminalSession();
+      final controller = TerminalSessionController(
+        host: _buildHost('predict'),
+        repository: _ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      controller.sendText('l');
+      controller.sendText('s');
+
+      expect(session.sent.map(String.fromCharCodes), ['l', 's']);
+      expect(controller.overlays.map((overlay) => overlay.text).join(), 'ls');
+      expect(controller.overlays.map((overlay) => overlay.column), [0, 1]);
+
+      session.emitStdout('ls');
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.overlays, isEmpty);
+
+      controller.dispose();
+    });
+
+    test(
+      'shows predictive overlays before the first mosh RTT sample',
+      () async {
+        final session = _PredictiveTerminalSession(smoothedRtt: null);
+        final controller = TerminalSessionController(
+          host: _buildHost('predict-no-rtt'),
+          repository: _ImmediateTerminalRepository(session),
+        );
+
+        await controller.connect();
+        controller.sendText('x');
+
+        expect(controller.overlays.map((overlay) => overlay.text).join(), 'x');
+
+        controller.dispose();
+      },
+    );
+
+    test(
+      'hides predictive cells once confirmed output reaches the buffer',
+      () async {
+        final session = _PredictiveTerminalSession();
+        final controller = TerminalSessionController(
+          host: _buildHost('predict-confirmed'),
+          repository: _ImmediateTerminalRepository(session),
+        );
+
+        await controller.connect();
+        controller.sendText('l');
+        controller.sendText('s');
+        expect(controller.overlays.map((overlay) => overlay.text).join(), 'ls');
+
+        session.emitStdout('l');
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.overlays.map((overlay) => overlay.text).join(), 's');
+
+        session.emitStdout('s');
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.overlays, isEmpty);
+
+        controller.dispose();
+      },
+    );
+
+    test(
+      'clears stale predictive cells once output cursor passes them',
+      () async {
+        final session = _PredictiveTerminalSession();
+        final controller = TerminalSessionController(
+          host: _buildHost('predict-stale'),
+          repository: _ImmediateTerminalRepository(session),
+        );
+
+        await controller.connect();
+        controller.sendText('a');
+        controller.sendText('b');
+        expect(controller.overlays.map((overlay) => overlay.text).join(), 'ab');
+
+        session.emitStdout('xy');
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.overlays, isEmpty);
+
+        controller.dispose();
+      },
+    );
+
+    test('predicts backspace over confirmed terminal text', () async {
+      final session = _PredictiveTerminalSession();
+      final controller = TerminalSessionController(
+        host: _buildHost('predict-backspace'),
+        repository: _ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      controller.sendText('abc');
+      session.emitStdout('abc');
+      await Future<void>.delayed(Duration.zero);
+
+      controller.sendKey(TerminalKey.backspace);
+
+      expect(session.sent.map(String.fromCharCodes), ['abc', '\x7f']);
+      expect(controller.overlays, hasLength(1));
+      expect(controller.overlays.single.column, 2);
+      expect(controller.overlays.single.text, isEmpty);
+      expect(controller.overlays.single.erase, isTrue);
+
+      controller.dispose();
+    });
+
+    test('can disable predictive overlays while keeping mosh input', () async {
+      final session = _PredictiveTerminalSession();
+      final controller = TerminalSessionController(
+        host: _buildHost('predict-off'),
+        repository: _ImmediateTerminalRepository(session),
+        predictiveEchoEnabled: false,
+      );
+
+      await controller.connect();
+      controller.sendText('l');
+      controller.sendText('s');
+
+      expect(session.sent.map(String.fromCharCodes), ['l', 's']);
+      expect(controller.overlays, isEmpty);
+
+      controller.predictiveEchoEnabled = true;
+      controller.sendText('!');
+      expect(controller.overlays.map((overlay) => overlay.text).join(), '!');
+
+      controller.predictiveEchoEnabled = false;
+      expect(controller.overlays, isEmpty);
+
+      controller.dispose();
+    });
   });
 
   group('SavedHost.isValid', () {
@@ -281,6 +420,9 @@ void main() {
         passphrase: 'pp',
         tags: const ['prod', 'edge'],
         connectionTimeoutSeconds: 30,
+        useMosh: true,
+        moshLocale: 'en_US.UTF-8',
+        predictiveEchoEnabled: false,
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
       );
 
@@ -299,6 +441,9 @@ void main() {
         decoded.connectionTimeoutSeconds,
         original.connectionTimeoutSeconds,
       );
+      expect(decoded.useMosh, original.useMosh);
+      expect(decoded.moshLocale, original.moshLocale);
+      expect(decoded.predictiveEchoEnabled, original.predictiveEchoEnabled);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
     });
   });
@@ -500,6 +645,21 @@ void main() {
       final controller = AppLockController(_AlwaysAuthenticates());
       await controller.unlock();
       expect(controller.isUnlocked, isTrue);
+    });
+
+    test('auth errors return to the locked state', () async {
+      final controller = AppLockController(const _ThrowingAuthenticator());
+      await controller.unlock();
+      expect(controller.status, AppLockStatus.locked);
+      expect(controller.message, isNotNull);
+    });
+
+    test('availability errors show the unavailable path', () async {
+      final controller = AppLockController(
+        const _ThrowingAuthenticator(throwFromCanAuthenticate: true),
+      );
+      await controller.unlock();
+      expect(controller.status, AppLockStatus.unavailable);
     });
   });
 
@@ -758,6 +918,25 @@ class _ScriptedAuthenticator implements AppAuthenticator {
   Future<bool> canAuthenticate() async => true;
 }
 
+class _ThrowingAuthenticator implements AppAuthenticator {
+  const _ThrowingAuthenticator({this.throwFromCanAuthenticate = false});
+
+  final bool throwFromCanAuthenticate;
+
+  @override
+  Future<AppAuthenticationResult> authenticate() async {
+    throw StateError('auth failed');
+  }
+
+  @override
+  Future<bool> canAuthenticate() async {
+    if (throwFromCanAuthenticate) {
+      throw StateError('availability failed');
+    }
+    return true;
+  }
+}
+
 class _EmptyHostsRepository implements SavedHostsRepository {
   @override
   Future<List<SavedHost>> loadHosts() async => const [];
@@ -911,6 +1090,62 @@ class _RoamingTerminalSession
   @override
   Future<void> rehome() async {
     rehomeCount += 1;
+  }
+}
+
+class _PredictiveTerminalSession
+    implements SshTerminalSession, PredictiveTerminalSession {
+  _PredictiveTerminalSession({
+    this.smoothedRtt = const Duration(milliseconds: 180),
+  });
+
+  final Completer<void> _done = Completer<void>();
+  final StreamController<int> _echoAcks = StreamController<int>.broadcast();
+  final StreamController<List<int>> _stdout = StreamController<List<int>>();
+  final List<List<int>> sent = <List<int>>[];
+  int _inputState = 0;
+
+  @override
+  Future<void> get done => _done.future;
+
+  @override
+  Stream<int> get echoAcks => _echoAcks.stream;
+
+  @override
+  Stream<List<int>> get stderr => const Stream.empty();
+
+  @override
+  final Duration? smoothedRtt;
+
+  @override
+  Stream<List<int>> get stdout => _stdout.stream;
+
+  void emitStdout(String data) {
+    _stdout.add(utf8.encode(data));
+  }
+
+  @override
+  Future<void> close() async {
+    if (!_done.isCompleted) {
+      _done.complete();
+    }
+    await _echoAcks.close();
+    await _stdout.close();
+  }
+
+  @override
+  void resize(int columns, int rows, int pixelWidth, int pixelHeight) {}
+
+  @override
+  Future<void> send(List<int> data) async {
+    sendWithInputState(data);
+  }
+
+  @override
+  int sendWithInputState(List<int> data) {
+    sent.add(List<int>.of(data));
+    _inputState += 1;
+    return _inputState;
   }
 }
 

@@ -92,12 +92,10 @@ packages:
   conduit_vt:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "v0.1.0"
-      resolved-ref: "1e964a9add8c0d26bb71448677286d24f44a9504"
-      url: "https://github.com/gwitko/conduit_vt.git"
-    source: git
-    version: "0.1.0"
+      path: "../conduit_vt"
+      relative: true
+    source: path
+    version: "0.1.1"
   connectivity_plus:
     dependency: "direct main"
     description:

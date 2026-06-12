@@ -33,7 +33,7 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _showPassword = false;
   bool _showPassphrase = false;
   bool _useMosh = false;
-  bool _predictiveEchoEnabled = true;
+  bool _predictiveEchoEnabled = false;
   List<String> _tags = const [];
 
   bool get _isEditing => widget.host != null;
@@ -297,7 +297,7 @@ class _HostFormPageState extends State<HostFormPage> {
                 const SizedBox(height: 4),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Connect with Mosh (experimental)'),
+                  title: const Text('Connect with Mosh'),
                   subtitle: const Text(
                     'Roaming UDP session over SSH. Requires mosh-server on the '
                     'host and open UDP ports.',
@@ -306,7 +306,7 @@ class _HostFormPageState extends State<HostFormPage> {
                   onChanged: (value) => setState(() => _useMosh = value),
                 ),
                 if (_useMosh) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _moshLocaleController,
                     decoration: const InputDecoration(
@@ -319,10 +319,10 @@ class _HostFormPageState extends State<HostFormPage> {
                     enableSuggestions: false,
                     textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 16),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Predictive echo'),
+                    title: const Text('Predictive echo (experimental)'),
                     subtitle: const Text(
                       'Show local input previews on laggy Mosh sessions.',
                     ),

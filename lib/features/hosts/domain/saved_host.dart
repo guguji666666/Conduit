@@ -15,7 +15,7 @@ class SavedHost {
     this.connectionTimeoutSeconds = 12,
     this.useMosh = false,
     this.moshLocale = 'C.UTF-8',
-    this.predictiveEchoEnabled = true,
+    this.predictiveEchoEnabled = false,
     this.lastConnectedAt,
   });
 
@@ -141,7 +141,7 @@ class SavedHost {
       moshLocale: (json['moshLocale'] as String?)?.trim().isNotEmpty == true
           ? (json['moshLocale'] as String).trim()
           : 'C.UTF-8',
-      predictiveEchoEnabled: json['predictiveEchoEnabled'] as bool? ?? true,
+      predictiveEchoEnabled: json['predictiveEchoEnabled'] as bool? ?? false,
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

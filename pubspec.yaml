@@ -14,9 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   dartssh2: ^2.17.1
   conduit_vt:
-    git:
-      url: https://github.com/gwitko/conduit_vt.git
-      ref: v0.1.0
+    path: ../conduit_vt
   dart_mosh: ^0.0.3
   flutter_secure_storage: ^10.3.1
   local_auth: ^3.0.1

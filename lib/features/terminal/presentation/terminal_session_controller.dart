@@ -52,7 +52,6 @@ class TerminalSessionController extends ChangeNotifier {
   StreamSubscription<void>? _doneSubscription;
   StreamSubscription<void>? _connectivitySubscription;
   StreamSubscription<int>? _echoAckSubscription;
-  String _title = '';
   int _pixelWidth = 0;
   int _pixelHeight = 0;
   Timer? _resizeTimer;
@@ -67,7 +66,7 @@ class TerminalSessionController extends ChangeNotifier {
   static const _iosDuplicateEnterWindow = Duration(milliseconds: 80);
 
   TerminalConnectionStatus get status => _status;
-  String get title => _title.isEmpty ? host.name : _title;
+  String get title => host.name;
   bool get isConnected => _status == TerminalConnectionStatus.connected;
   bool get predictiveEchoEnabled => _predictiveEchoEnabled;
   Listenable get terminalPaintListenable => _terminalPaintNotifier;
@@ -192,6 +191,7 @@ class TerminalSessionController extends ChangeNotifier {
 
       _status = TerminalConnectionStatus.connected;
       notifyListeners();
+      _startTmuxIfConfigured(session);
     } on AppFailure catch (failure) {
       if (_disposed || generation != _connectionGeneration) {
         return;
@@ -265,12 +265,35 @@ class TerminalSessionController extends ChangeNotifier {
     keyboard.clearModifiers();
   }
 
+  void _startTmuxIfConfigured(SshTerminalSession session) {
+    if (!host.startTmuxOnConnect) {
+      return;
+    }
+    unawaited(
+      session
+          .send(utf8.encode(_buildTmuxCommand()))
+          .catchError(_handleStreamError),
+    );
+  }
+
+  String _buildTmuxCommand() {
+    final command = StringBuffer('tmux new-session -A -s conduit');
+    final startDirectory = host.tmuxStartDirectory.trim();
+    if (startDirectory.isNotEmpty) {
+      command.write(' -c ${_shellQuote(startDirectory)}');
+    }
+    command.write('\r');
+    return command.toString();
+  }
+
+  static final _unquotedPath = RegExp(r'^[A-Za-z0-9_~./:=+-]+$');
+
+  static String _shellQuote(String value) => _unquotedPath.hasMatch(value)
+      ? value
+      : "'${value.replaceAll("'", r"'\''")}'";
+
   void _configureTerminal() {
     terminal.inputHandler = keyboard;
-    terminal.onTitleChange = (title) {
-      _title = title;
-      notifyListeners();
-    };
     terminal.onResize = (columns, rows, pixelWidth, pixelHeight) {
       _pixelWidth = pixelWidth;
       _pixelHeight = pixelHeight;
@@ -279,9 +302,7 @@ class TerminalSessionController extends ChangeNotifier {
       _resizeTimer?.cancel();
       _resizeTimer = Timer(const Duration(milliseconds: 250), _flushResize);
     };
-    terminal.onOutput = (data) {
-      _sendTerminalOutput(data);
-    };
+    terminal.onOutput = _sendTerminalOutput;
   }
 
   void _sendTerminalOutput(String data) {

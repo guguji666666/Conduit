@@ -1,7 +1,7 @@
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
-import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/app_palette.dart';
+import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:flutter/material.dart';
@@ -291,6 +291,16 @@ Future<void> _showKeyboardActionsEditor(
                           }),
                           child: const Text('Reset'),
                         ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            selected.addAll(
+                              tmuxTerminalKeyboardActions.where(
+                                (action) => !selected.contains(action),
+                              ),
+                            );
+                          }),
+                          child: const Text('Tmux'),
+                        ),
                         IconButton(
                           tooltip: 'Close',
                           onPressed: () => Navigator.of(context).pop(),
@@ -434,6 +444,8 @@ IconData _keyboardActionIcon(TerminalKeyboardAction action) {
     TerminalKeyboardAction.dash => Icons.text_fields_rounded,
     TerminalKeyboardAction.paste => Icons.content_paste_rounded,
     TerminalKeyboardAction.functionKeys => Icons.keyboard_rounded,
+    TerminalKeyboardAction.tmuxPrefix => Icons.keyboard_command_key_rounded,
+    TerminalKeyboardAction.tmuxMenu => Icons.view_quilt_rounded,
   };
 }
 

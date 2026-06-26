@@ -15,7 +15,7 @@ class TerminalKeyboardBar extends StatelessWidget {
     required this.focusNode,
     required this.palette,
     required this.brightness,
-    required this.actions,
+    required this.items,
     required this.fullscreen,
     required this.onToggleFullscreen,
     required this.onEnterTmuxScrollMode,
@@ -27,7 +27,7 @@ class TerminalKeyboardBar extends StatelessWidget {
   final FocusNode focusNode;
   final AppPalette palette;
   final Brightness brightness;
-  final List<TerminalKeyboardAction> actions;
+  final List<TerminalKeyboardItem> items;
   final bool fullscreen;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onEnterTmuxScrollMode;
@@ -61,12 +61,25 @@ class TerminalKeyboardBar extends StatelessWidget {
                   safePadding.right + 8,
                   7,
                 ),
-                children: [for (final action in actions) _buildAction(action)],
+                children: [for (final item in items) _buildItem(item)],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildItem(TerminalKeyboardItem item) {
+    final action = item.action;
+    if (item.kind == TerminalKeyboardItemKind.builtIn && action != null) {
+      return _buildAction(action);
+    }
+    return _Key(
+      label: item.displayLabel,
+      palette: palette,
+      brightness: brightness,
+      onPressed: () => _triggerCustomItem(item),
     );
   }
 
@@ -243,6 +256,30 @@ class TerminalKeyboardBar extends StatelessWidget {
     _focusTerminal();
   }
 
+  void _triggerCustomItem(TerminalKeyboardItem item) {
+    switch (item.kind) {
+      case TerminalKeyboardItemKind.customText:
+        final text = item.submit ? '${item.text ?? ''}\r' : item.text;
+        if (text != null && text.isNotEmpty) {
+          _sendText(text);
+        } else {
+          _focusTerminal();
+        }
+      case TerminalKeyboardItemKind.customControl:
+        final key = _controlKeyFor(item.controlKey);
+        if (key != null) {
+          _sendControl(key);
+        } else {
+          _focusTerminal();
+        }
+      case TerminalKeyboardItemKind.builtIn:
+        final action = item.action;
+        if (action != null) {
+          _triggerAction(action);
+        }
+    }
+  }
+
   void _sendKey(TerminalKey key) {
     controller.sendKey(key);
     _focusTerminal();
@@ -366,6 +403,38 @@ const _repeatableActions = {
   TerminalKeyboardAction.pageDown,
 };
 
+TerminalKey? _controlKeyFor(String? key) {
+  return switch (key) {
+    'A' => TerminalKey.keyA,
+    'B' => TerminalKey.keyB,
+    'C' => TerminalKey.keyC,
+    'D' => TerminalKey.keyD,
+    'E' => TerminalKey.keyE,
+    'F' => TerminalKey.keyF,
+    'G' => TerminalKey.keyG,
+    'H' => TerminalKey.keyH,
+    'I' => TerminalKey.keyI,
+    'J' => TerminalKey.keyJ,
+    'K' => TerminalKey.keyK,
+    'L' => TerminalKey.keyL,
+    'M' => TerminalKey.keyM,
+    'N' => TerminalKey.keyN,
+    'O' => TerminalKey.keyO,
+    'P' => TerminalKey.keyP,
+    'Q' => TerminalKey.keyQ,
+    'R' => TerminalKey.keyR,
+    'S' => TerminalKey.keyS,
+    'T' => TerminalKey.keyT,
+    'U' => TerminalKey.keyU,
+    'V' => TerminalKey.keyV,
+    'W' => TerminalKey.keyW,
+    'X' => TerminalKey.keyX,
+    'Y' => TerminalKey.keyY,
+    'Z' => TerminalKey.keyZ,
+    _ => null,
+  };
+}
+
 class _Key extends StatefulWidget {
   const _Key({
     required this.palette,
@@ -474,6 +543,7 @@ class _KeyState extends State<_Key> {
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       softWrap: false,
                     )
                   : Icon(widget.icon, color: foreground, size: 20),

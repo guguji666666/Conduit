@@ -237,7 +237,9 @@ void main() {
               focusNode: focusNode,
               palette: AppPalette.catppuccin,
               brightness: Brightness.dark,
-              actions: const [TerminalKeyboardAction.arrowDown],
+              items: const [
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.arrowDown),
+              ],
               fullscreen: false,
               onToggleFullscreen: () {},
               onEnterTmuxScrollMode: () {},
@@ -275,6 +277,51 @@ void main() {
         TerminalKey.arrowDown,
         TerminalKey.arrowDown,
       ]);
+    });
+
+    testWidgets('sends custom keyboard row items', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              items: const [
+                TerminalKeyboardItem(
+                  id: 'custom:text',
+                  kind: TerminalKeyboardItemKind.customText,
+                  label: 'gs',
+                  text: 'git status',
+                  submit: true,
+                ),
+                TerminalKeyboardItem(
+                  id: 'custom:ctrl',
+                  kind: TerminalKeyboardItemKind.customControl,
+                  label: 'C-a',
+                  controlKey: 'A',
+                ),
+              ],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('gs'));
+      await tester.tap(find.text('C-a'));
+
+      expect(controller.sentText, ['git status\r']);
+      expect(controller.sentControlKeys, [TerminalKey.keyA]);
     });
 
     test('keyboard input clears toggled row modifiers after one key', () {
@@ -907,10 +954,24 @@ class _RecordingTerminalSessionController extends TerminalSessionController {
       );
 
   final List<TerminalKey> sentKeys = <TerminalKey>[];
+  final List<TerminalKey> sentControlKeys = <TerminalKey>[];
+  final List<String> sentText = <String>[];
 
   @override
   void sendKey(TerminalKey key) {
     sentKeys.add(key);
+    keyboard.clearModifiers();
+  }
+
+  @override
+  void sendControl(TerminalKey key) {
+    sentControlKeys.add(key);
+    keyboard.clearModifiers();
+  }
+
+  @override
+  void sendText(String text) {
+    sentText.add(text);
     keyboard.clearModifiers();
   }
 }

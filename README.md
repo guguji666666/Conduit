@@ -34,12 +34,14 @@ Dart implementation of the protocol, and the terminal is
 
 ## Features
 
-- SSH terminal sessions with saved machine profiles and tabbed workspaces.
+- SSH terminal sessions with saved machine profiles, tag and search filters,
+  sorting by last connected, name, or date added, and tabbed workspaces.
 - Mosh sessions for roaming across Wi-Fi drops and network changes.
 - Per-host tmux integration with auto attach/create, start directories, prefix
   key selection, action shortcuts, and scrollback mode.
 - SFTP browser for navigating, downloading, uploading, renaming, and deleting files.
-- OpenSSH private key, password, and hardware security key authentication.
+- OpenSSH private key, password, hardware security key, and external
+  (server-driven) authentication.
 - Import private keys from a file or generate an `ed25519` key on device, with
   optional passphrase encryption and one-tap public-key copy and export.
 - OpenSSH FIDO security-key auth for `ed25519-sk` and `ecdsa-sk` credentials,
@@ -49,7 +51,8 @@ Dart implementation of the protocol, and the terminal is
   so a remote host can use your key to reach further hosts; forwarded hardware
   keys still require a touch for every onward signature.
 - Trusted host key management with explicit fingerprint review.
-- On-screen terminal controls for modifiers, arrows, function keys, and common shell input.
+- Customizable on-screen key row with modifiers, arrows, function keys, key
+  repeat, latching modifiers, and your own text snippets and control-key combos.
 - Optional device-auth app lock for protecting saved machines and credentials.
 - Built-in terminal themes, font sizing, palette choices, and appearance controls.
 - Local-first storage: no account, no cloud sync, no subscription.

@@ -43,6 +43,9 @@ class _HostFormPageState extends State<HostFormPage> {
   final _tagController = TextEditingController();
   final _timeoutController = TextEditingController(text: '12');
   final _moshLocaleController = TextEditingController(text: 'C.UTF-8');
+  final _tmuxSessionNameController = TextEditingController(
+    text: defaultTmuxSessionName,
+  );
   final _tmuxStartDirectoryController = TextEditingController();
   final FocusNode _tagFocusNode = FocusNode();
   SshAuthMethod _authMethod = SshAuthMethod.password;
@@ -89,6 +92,7 @@ class _HostFormPageState extends State<HostFormPage> {
       _forwardAgent = host.forwardAgent;
       _startTmuxOnConnect = host.startTmuxOnConnect;
       _tmuxPrefixKey = host.tmuxPrefixKey;
+      _tmuxSessionNameController.text = host.tmuxSessionName;
       _tmuxStartDirectoryController.text = host.tmuxStartDirectory;
     }
     _keyInspection = _cheapPreview();
@@ -149,6 +153,7 @@ class _HostFormPageState extends State<HostFormPage> {
     _tagFocusNode.dispose();
     _timeoutController.dispose();
     _moshLocaleController.dispose();
+    _tmuxSessionNameController.dispose();
     _tmuxStartDirectoryController.dispose();
     super.dispose();
   }
@@ -234,6 +239,7 @@ class _HostFormPageState extends State<HostFormPage> {
               tagFocusNode: _tagFocusNode,
               timeoutController: _timeoutController,
               moshLocaleController: _moshLocaleController,
+              tmuxSessionNameController: _tmuxSessionNameController,
               tmuxStartDirectoryController: _tmuxStartDirectoryController,
               useMosh: _useMosh,
               predictiveEchoEnabled: _predictiveEchoEnabled,
@@ -491,6 +497,9 @@ class _HostFormPageState extends State<HostFormPage> {
       predictiveEchoEnabled: _predictiveEchoEnabled,
       startTmuxOnConnect: _startTmuxOnConnect,
       tmuxPrefixKey: _tmuxPrefixKey,
+      tmuxSessionName: _tmuxSessionNameController.text.trim().isEmpty
+          ? defaultTmuxSessionName
+          : _tmuxSessionNameController.text.trim(),
       tmuxStartDirectory: _tmuxStartDirectoryController.text.trim(),
       lastConnectedAt: currentHost?.lastConnectedAt,
     );

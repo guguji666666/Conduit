@@ -27,6 +27,33 @@ import '../../support/test_doubles.dart';
 
 void main() {
   group('TerminalSessionController', () {
+    test('builds quoted tmux startup command when enabled', () {
+      final controller = TerminalSessionController(
+        host: buildHost('tmux-create').copyWith(
+          startTmuxOnConnect: true,
+          tmuxSessionName: 'work session',
+          tmuxStartDirectory: "~/client's app",
+        ),
+        repository: ImmediateTerminalRepository(TrackableTerminalSession()),
+      );
+      addTearDown(controller.dispose);
+
+      expect(
+        controller.buildTmuxCommandForTesting(),
+        "tmux new-session -A -s 'work session' -c '~/client'\\''s app'\r",
+      );
+    });
+
+    test('does not build a tmux startup command when disabled', () {
+      final controller = TerminalSessionController(
+        host: buildHost('tmux-off'),
+        repository: ImmediateTerminalRepository(TrackableTerminalSession()),
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.buildTmuxCommandForTesting(), isNull);
+    });
+
     test('ignores a connection that completes after disconnect', () async {
       final repository = PendingTerminalRepository();
       final session = TrackableTerminalSession();

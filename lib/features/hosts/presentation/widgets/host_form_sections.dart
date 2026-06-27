@@ -255,6 +255,7 @@ class HostAdvancedSection extends StatelessWidget {
     required this.tagFocusNode,
     required this.timeoutController,
     required this.moshLocaleController,
+    required this.tmuxSessionNameController,
     required this.tmuxStartDirectoryController,
     required this.useMosh,
     required this.predictiveEchoEnabled,
@@ -275,6 +276,7 @@ class HostAdvancedSection extends StatelessWidget {
   final FocusNode tagFocusNode;
   final TextEditingController timeoutController;
   final TextEditingController moshLocaleController;
+  final TextEditingController tmuxSessionNameController;
   final TextEditingController tmuxStartDirectoryController;
   final bool useMosh;
   final bool predictiveEchoEnabled;
@@ -362,13 +364,26 @@ class HostAdvancedSection extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Start tmux on connect'),
             subtitle: const Text(
-              'Attach to an existing tmux session, or create one if needed.',
+              'Attach to the named tmux session, or create it if needed.',
             ),
             value: startTmuxOnConnect,
             onChanged: onStartTmuxOnConnectChanged,
           ),
         ),
         if (startTmuxOnConnect) ...[
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: tmuxSessionNameController,
+            decoration: const InputDecoration(
+              labelText: 'Tmux session name',
+              hintText: defaultTmuxSessionName,
+              helperText: 'Conduit attaches to this session, or creates it.',
+              prefixIcon: Icon(Icons.view_stream_outlined),
+            ),
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+          ),
           const SizedBox(height: 16),
           TextFormField(
             controller: tmuxStartDirectoryController,

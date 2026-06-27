@@ -92,6 +92,7 @@ void main() {
         moshLocale: 'en_US.UTF-8',
         startTmuxOnConnect: true,
         tmuxPrefixKey: TmuxPrefixKey.controlA,
+        tmuxSessionName: 'work',
         tmuxStartDirectory: '~/projects',
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
       );
@@ -116,6 +117,7 @@ void main() {
       expect(decoded.predictiveEchoEnabled, original.predictiveEchoEnabled);
       expect(decoded.startTmuxOnConnect, original.startTmuxOnConnect);
       expect(decoded.tmuxPrefixKey, original.tmuxPrefixKey);
+      expect(decoded.tmuxSessionName, original.tmuxSessionName);
       expect(decoded.tmuxStartDirectory, original.tmuxStartDirectory);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
     });
@@ -133,7 +135,24 @@ void main() {
 
       expect(decoded.startTmuxOnConnect, isFalse);
       expect(decoded.tmuxPrefixKey, TmuxPrefixKey.controlB);
+      expect(decoded.tmuxSessionName, defaultTmuxSessionName);
       expect(decoded.tmuxStartDirectory, isEmpty);
+    });
+
+    test('legacy tmux start flag is still supported', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Legacy Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'password',
+        'password': 'secret',
+        'startTmuxOnConnect': true,
+      });
+
+      expect(decoded.startTmuxOnConnect, isTrue);
+      expect(decoded.tmuxSessionName, defaultTmuxSessionName);
     });
 
     test('preserves hardware key auth method', () {

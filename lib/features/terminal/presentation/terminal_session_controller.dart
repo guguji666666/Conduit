@@ -266,18 +266,28 @@ class TerminalSessionController extends ChangeNotifier {
   }
 
   void _startTmuxIfConfigured(SshTerminalSession session) {
-    if (!host.startTmuxOnConnect) {
+    final command = _buildTmuxCommand();
+    if (command == null) {
       return;
     }
     unawaited(
-      session
-          .send(utf8.encode(_buildTmuxCommand()))
-          .catchError(_handleStreamError),
+      session.send(utf8.encode(command)).catchError(_handleStreamError),
     );
   }
 
-  String _buildTmuxCommand() {
-    final command = StringBuffer('tmux new-session -A -s conduit');
+  @visibleForTesting
+  String? buildTmuxCommandForTesting() => _buildTmuxCommand();
+
+  String? _buildTmuxCommand() {
+    if (!host.startTmuxOnConnect) {
+      return null;
+    }
+    final sessionName = host.tmuxSessionName.trim().isEmpty
+        ? defaultTmuxSessionName
+        : host.tmuxSessionName.trim();
+    final command = StringBuffer(
+      'tmux new-session -A -s ${_shellQuote(sessionName)}',
+    );
     final startDirectory = host.tmuxStartDirectory.trim();
     if (startDirectory.isNotEmpty) {
       command.write(' -c ${_shellQuote(startDirectory)}');

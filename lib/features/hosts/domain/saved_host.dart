@@ -3,6 +3,11 @@ enum SshAuthMethod { password, privateKey, hardwareKey }
 enum TmuxPrefixKey { controlB, controlA }
 
 const defaultTmuxPrefixKey = TmuxPrefixKey.controlB;
+const defaultTmuxSessionName = 'conduit';
+
+bool _parseStartTmuxOnConnect(Map<String, Object?> json) {
+  return json['startTmuxOnConnect'] as bool? ?? false;
+}
 
 extension TmuxPrefixKeyDetails on TmuxPrefixKey {
   String get label => switch (this) {
@@ -30,6 +35,7 @@ class SavedHost {
     this.predictiveEchoEnabled = false,
     this.startTmuxOnConnect = false,
     this.tmuxPrefixKey = defaultTmuxPrefixKey,
+    this.tmuxSessionName = defaultTmuxSessionName,
     this.tmuxStartDirectory = '',
     this.lastConnectedAt,
   });
@@ -51,6 +57,7 @@ class SavedHost {
   final bool predictiveEchoEnabled;
   final bool startTmuxOnConnect;
   final TmuxPrefixKey tmuxPrefixKey;
+  final String tmuxSessionName;
   final String tmuxStartDirectory;
   final DateTime? lastConnectedAt;
 
@@ -89,6 +96,7 @@ class SavedHost {
     bool? predictiveEchoEnabled,
     bool? startTmuxOnConnect,
     TmuxPrefixKey? tmuxPrefixKey,
+    String? tmuxSessionName,
     String? tmuxStartDirectory,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
@@ -113,6 +121,7 @@ class SavedHost {
           predictiveEchoEnabled ?? this.predictiveEchoEnabled,
       startTmuxOnConnect: startTmuxOnConnect ?? this.startTmuxOnConnect,
       tmuxPrefixKey: tmuxPrefixKey ?? this.tmuxPrefixKey,
+      tmuxSessionName: tmuxSessionName ?? this.tmuxSessionName,
       tmuxStartDirectory: tmuxStartDirectory ?? this.tmuxStartDirectory,
       lastConnectedAt: clearLastConnectedAt
           ? null
@@ -139,6 +148,7 @@ class SavedHost {
       'predictiveEchoEnabled': predictiveEchoEnabled,
       'startTmuxOnConnect': startTmuxOnConnect,
       'tmuxPrefixKey': tmuxPrefixKey.name,
+      'tmuxSessionName': tmuxSessionName,
       'tmuxStartDirectory': tmuxStartDirectory,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
     };
@@ -175,11 +185,15 @@ class SavedHost {
           ? (json['moshLocale'] as String).trim()
           : 'C.UTF-8',
       predictiveEchoEnabled: json['predictiveEchoEnabled'] as bool? ?? false,
-      startTmuxOnConnect: json['startTmuxOnConnect'] as bool? ?? false,
+      startTmuxOnConnect: _parseStartTmuxOnConnect(json),
       tmuxPrefixKey: TmuxPrefixKey.values.firstWhere(
         (key) => key.name == json['tmuxPrefixKey'],
         orElse: () => defaultTmuxPrefixKey,
       ),
+      tmuxSessionName:
+          (json['tmuxSessionName'] as String?)?.trim().isNotEmpty == true
+          ? (json['tmuxSessionName'] as String).trim()
+          : defaultTmuxSessionName,
       tmuxStartDirectory: (json['tmuxStartDirectory'] as String?)?.trim() ?? '',
       lastConnectedAt: lastConnectedAtRaw == null
           ? null

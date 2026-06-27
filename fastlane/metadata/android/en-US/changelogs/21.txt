@@ -1,0 +1,8 @@
+This release adds custom keys, more tmux controls, external auth, and machine sorting.
+
+* Add your own text and control-key keys to the on-screen key row.
+* Hold a key to repeat it, and tap a modifier to latch it for the next press.
+* More tmux controls from the key row, including the prefix and menu.
+* New External auth: let the SSH server authenticate you without saved credentials.
+* Sort machines by last connected, name, or date added.
+* Fixed extra spacing in the Appearance font preview.

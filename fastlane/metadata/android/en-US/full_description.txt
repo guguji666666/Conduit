@@ -11,13 +11,14 @@ Features:
 * Import SSH private keys from a file, or generate an Ed25519 key on device
 * Optional passphrase encryption for generated keys, with public-key copy and export
 * OpenSSH FIDO hardware-key authentication, tested with YubiKey
+* External authentication that lets the SSH server authenticate you without saved credentials
 * USB and NFC support for CTAP-compatible security keys
-* Saved machine profiles with tags and search
+* Saved machine profiles with tags, search, and sorting by last connected, name, or date added
 * Local credential and trusted host key storage
 * Trusted host key prompts and key management
 * App lock with device authentication when supported
 * Tabbed terminal workspace
-* Mobile-friendly modifier, navigation, and function keys
+* Customizable key row with modifier, navigation, and function keys, key repeat, latching modifiers, and your own text and control-key shortcuts
 * Fullscreen terminal mode
 * Terminal themes
 * Background keepalive through a foreground service

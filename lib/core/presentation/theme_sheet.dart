@@ -212,6 +212,8 @@ class _TerminalAppearanceControls extends StatelessWidget {
               fontFamily: controller.terminalFont.fontFamily,
               fontSize: controller.terminalFontSize,
               color: colorScheme.onSurface,
+              letterSpacing: 0,
+              height: 1.2,
             ),
           ),
         ),
